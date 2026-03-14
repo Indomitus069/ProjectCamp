@@ -85,6 +85,10 @@ const InviteMemberDialog = ({ isDialogOpen, setIsDialogOpen, onSuccess }) => {
 
                 {/* Form */}
                 <form onSubmit={handleSubmit} className="space-y-4">
+                    <div className="rounded-md border border-blue-200 dark:border-blue-900/60 bg-blue-50 dark:bg-blue-950/30 px-3 py-2 text-xs text-blue-800 dark:text-blue-200">
+                        If email delivery is limited, you can still create the invite and copy the acceptance link from the Team page.
+                    </div>
+
                     {/* Email */}
                     <div className="space-y-2">
                         <label htmlFor="email" className="text-sm font-medium text-zinc-900 dark:text-zinc-200">
