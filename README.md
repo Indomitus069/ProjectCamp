@@ -106,6 +106,18 @@ VITE_API_BASE_URL=https://your-api-domain.example.com
 
 If `VITE_API_BASE_URL` is not set, the frontend uses the current origin. That is the recommended production setup when the backend serves the built app.
 
+### Invitation Emails on Render Free
+
+Render Free blocks outbound SMTP, so Gmail SMTP invite sending will not work there.
+Use Resend over HTTPS instead:
+
+```env
+RESEND_API_KEY=re_your_resend_api_key
+MAIL_FROM=ProjectCamp <onboarding@resend.dev>
+```
+
+SMTP settings are still useful locally or on hosts that allow outbound SMTP.
+
 ---
 
 ## 📜 License

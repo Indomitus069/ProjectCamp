@@ -5,6 +5,8 @@ if (typeof dns.setDefaultResultOrder === "function") {
   dns.setDefaultResultOrder("ipv4first");
 }
 
+const resendApiKey = process.env.RESEND_API_KEY || "";
+const hasResendConfig = Boolean(resendApiKey);
 const hasMailConfig = Boolean(process.env.MAIL_USER && process.env.MAIL_PASS);
 const isGmail = hasMailConfig && (
   (process.env.MAIL_USER || "").includes("gmail.com") ||
@@ -33,7 +35,9 @@ const transporter = nodemailer.createTransport({
     : undefined,
 });
 
-if (!hasMailConfig) {
+if (hasResendConfig) {
+  console.log("Mail provider configured: Resend API");
+} else if (!hasMailConfig) {
   console.warn("Mail: MAIL_USER/MAIL_PASS not set. Invitation emails will not be sent. Add them to backend/.env for production or use Ethereal for testing.");
 } else {
   console.log(
@@ -46,22 +50,58 @@ const appUrl = process.env.CLIENT_URL || "http://localhost:5173";
 let mailTransportVerified = false;
 
 async function verifyMailTransport() {
+  if (hasResendConfig) {
+    return { ok: true, provider: "resend" };
+  }
+
   if (!hasMailConfig) {
-    return { ok: false, error: "MAIL_USER/MAIL_PASS not set" };
+    return { ok: false, error: "No mail provider configured. Set RESEND_API_KEY or SMTP env vars." };
   }
 
   if (mailTransportVerified) {
-    return { ok: true };
+    return { ok: true, provider: "smtp" };
   }
 
   try {
     await transporter.verify();
     mailTransportVerified = true;
     console.log(`Mail transport verified for ${process.env.MAIL_USER}`);
-    return { ok: true };
+    return { ok: true, provider: "smtp" };
   } catch (err) {
     console.error("Mail transport verification failed:", err.message);
     return { ok: false, error: err.message };
+  }
+}
+
+async function sendWithResend(mailOptions) {
+  try {
+    console.log(`Sending invitation email via Resend to ${mailOptions.to}`);
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${resendApiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: mailOptions.from,
+        to: [mailOptions.to],
+        subject: mailOptions.subject,
+        html: mailOptions.html,
+      }),
+    });
+
+    const json = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const error = json?.message || json?.error?.message || `Resend request failed with status ${response.status}`;
+      console.error("Invitation email send failed:", error);
+      return { sent: false, error };
+    }
+
+    console.log(`Invitation email sent to ${mailOptions.to} via Resend (id: ${json?.id || "unknown"})`);
+    return { sent: true, messageId: json?.id || null, accepted: [mailOptions.to] };
+  } catch (err) {
+    console.error("Invitation email send failed:", err.message);
+    return { sent: false, error: err.message };
   }
 }
 
@@ -97,6 +137,10 @@ async function sendInvitationEmail({ to, inviterEmail, workspaceName, role, acce
     const verification = await verifyMailTransport();
     if (!verification.ok) {
       return { sent: false, error: verification.error || "Mail transport is not configured correctly" };
+    }
+
+    if (verification.provider === "resend") {
+      return sendWithResend(mailOptions);
     }
 
     console.log(`Sending invitation email to ${to}`);

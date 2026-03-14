@@ -44,10 +44,6 @@ export default function Settings() {
                             <p className="text-zinc-500 dark:text-zinc-400">Email</p>
                             <p>{primaryEmail}</p>
                         </div>
-                        <div>
-                            <p className="text-zinc-500 dark:text-zinc-400">Clerk User ID</p>
-                            <p className="break-all">{user?.id || "Unavailable"}</p>
-                        </div>
                     </div>
                 </div>
 
