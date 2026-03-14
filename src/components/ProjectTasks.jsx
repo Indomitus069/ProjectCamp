@@ -3,8 +3,11 @@ import toast from "react-hot-toast";
 import { useDispatch } from "react-redux";
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@clerk/clerk-react";
 import { deleteTask, updateTask } from "../features/workspaceSlice";
 import { Bug, CalendarIcon, GitCommit, MessageSquare, Square, Trash, XIcon, Zap } from "lucide-react";
+import { normalizeTask } from "../utils/normalize";
+import { buildApiUrl } from "../utils/api";
 
 const typeIcons = {
     BUG: { icon: Bug, color: "text-red-600 dark:text-red-400" },
@@ -23,6 +26,7 @@ const priorityTexts = {
 const ProjectTasks = ({ tasks }) => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
+    const { getToken } = useAuth();
     const [selectedTasks, setSelectedTasks] = useState([]);
 
     const [filters, setFilters] = useState({
@@ -57,19 +61,32 @@ const ProjectTasks = ({ tasks }) => {
     const handleStatusChange = async (taskId, newStatus) => {
         try {
             toast.loading("Updating status...");
+            const token = await getToken();
+            const response = await fetch(buildApiUrl(`/api/v1/tasks/${taskId}`), {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({ status: newStatus.toLowerCase() }),
+            });
 
-            //  Simulate API call
-            await new Promise((resolve) => setTimeout(resolve, 2000));
+            if (!response.ok) {
+                throw new Error("Failed to update status");
+            }
 
-            let updatedTask = structuredClone(tasks.find((t) => t.id === taskId));
-            updatedTask.status = newStatus;
-            dispatch(updateTask(updatedTask));
+            const json = await response.json();
+            const updated = json?.data;
+            
+            if (updated) {
+                dispatch(updateTask(normalizeTask(updated)));
+            }
 
             toast.dismissAll();
             toast.success("Task status updated successfully");
         } catch (error) {
             toast.dismissAll();
-            toast.error(error?.response?.data?.message || error.message);
+            toast.error(error.message);
         }
     };
 
@@ -79,17 +96,27 @@ const ProjectTasks = ({ tasks }) => {
             if (!confirm) return;
 
             toast.loading("Deleting tasks...");
+            const token = await getToken();
 
-            //  Simulate API call
-            await new Promise((resolve) => setTimeout(resolve, 2000));
+            // Note: Current backend API only supports deleting one task at a time
+            // For simplicity in this fix, we'll delete them sequentially or just the first one
+            // Ideally backend should support bulk delete
+            for (const taskId of selectedTasks) {
+                const response = await fetch(buildApiUrl(`/api/v1/tasks/${taskId}`), {
+                    method: "DELETE",
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+                if (!response.ok) throw new Error(`Failed to delete task ${taskId}`);
+            }
 
-            dispatch(deleteTask(selectedTasks));
+            dispatch(deleteTask({ projectId: tasks[0]?.projectId, taskIds: selectedTasks }));
+            setSelectedTasks([]);
 
             toast.dismissAll();
             toast.success("Tasks deleted successfully");
         } catch (error) {
             toast.dismissAll();
-            toast.error(error?.response?.data?.message || error.message);
+            toast.error(error.message);
         }
     };
 

@@ -8,6 +8,8 @@ const {
   getTaskById,
   updateTask,
   deleteTask,
+  getTaskComments,
+  createTaskComment,
   createSubTask,
   updateSubTask,
   deleteSubTask,
@@ -19,6 +21,8 @@ router.use(requireAuth);
 router.post("/:projectId", checkProjectRole(["admin", "project_admin"]), createTask);
 router.get("/:projectId", checkProjectRole(["admin", "project_admin", "member"]), getTasks);
 router.get("/single/:taskId", getTaskById);
+router.get("/single/:taskId/comments", getTaskComments);
+router.post("/single/:taskId/comments", createTaskComment);
 router.put("/:taskId", updateTask); // Frontend needs to pass IDs or have specific role checks
 router.delete("/:taskId", deleteTask);
 

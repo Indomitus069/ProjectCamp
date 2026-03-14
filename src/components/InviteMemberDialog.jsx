@@ -1,11 +1,15 @@
 import { useState } from "react";
 import { Mail, UserPlus } from "lucide-react";
 import { useSelector } from "react-redux";
+import { useAuth } from "@clerk/clerk-react";
+import { buildApiUrl } from "../utils/api";
 
-const InviteMemberDialog = ({ isDialogOpen, setIsDialogOpen }) => {
+const InviteMemberDialog = ({ isDialogOpen, setIsDialogOpen, onSuccess }) => {
 
     const currentWorkspace = useSelector((state) => state.workspace?.currentWorkspace || null);
+    const { getToken } = useAuth();
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [error, setError] = useState("");
     const [formData, setFormData] = useState({
         email: "",
         role: "org:member",
@@ -13,7 +17,45 @@ const InviteMemberDialog = ({ isDialogOpen, setIsDialogOpen }) => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-
+        setError("");
+        setIsSubmitting(true);
+        try {
+            const token = await getToken();
+            if (!token) {
+                setError("You must be signed in to send an invitation.");
+                return;
+            }
+            const workspaceId = currentWorkspace?.id || "default";
+            const res = await fetch(buildApiUrl("/api/v1/invitations"), {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                    email: formData.email.trim(),
+                    role: formData.role,
+                    workspaceId,
+                }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                setError(data?.message || "Failed to send invitation.");
+                return;
+            }
+            setFormData({ email: "", role: "org:member" });
+            if (typeof onSuccess === "function") onSuccess();
+            setIsDialogOpen(false);
+        } catch (err) {
+            const msg = err?.message || "Something went wrong. Please try again.";
+            setError(
+                msg.includes("fetch") || msg.includes("Network")
+                    ? "Cannot reach the server. Check that the API is running and reachable from this environment."
+                    : msg
+            );
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     if (!isDialogOpen) return null;
@@ -60,10 +102,13 @@ const InviteMemberDialog = ({ isDialogOpen, setIsDialogOpen }) => {
                         <button type="button" onClick={() => setIsDialogOpen(false)} className="px-5 py-2 rounded text-sm border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition" >
                             Cancel
                         </button>
-                        <button type="submit" disabled={isSubmitting || !currentWorkspace} className="px-5 py-2 rounded text-sm bg-gradient-to-br from-blue-500 to-blue-600 text-white disabled:opacity-50 hover:opacity-90 transition" >
+                        <button type="submit" disabled={isSubmitting || !formData.email?.trim()} className="px-5 py-2 rounded text-sm bg-gradient-to-br from-blue-500 to-blue-600 text-white disabled:opacity-50 hover:opacity-90 transition" >
                             {isSubmitting ? "Sending..." : "Send Invitation"}
                         </button>
                     </div>
+                    {error && (
+                        <p className="text-sm text-red-600 dark:text-red-400 mt-2">{error}</p>
+                    )}
                 </form>
             </div>
         </div>

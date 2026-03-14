@@ -1,9 +1,16 @@
 import { useState } from "react";
 import { Calendar as CalendarIcon } from "lucide-react";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import { format } from "date-fns";
+import { useAuth } from "@clerk/clerk-react";
+import toast from "react-hot-toast";
+import { addTask } from "../features/workspaceSlice";
+import { normalizeTask } from "../utils/normalize";
+import { buildApiUrl } from "../utils/api";
 
 export default function CreateTaskDialog({ showCreateTask, setShowCreateTask, projectId }) {
+    const dispatch = useDispatch();
+    const { getToken } = useAuth();
     const currentWorkspace = useSelector((state) => state.workspace?.currentWorkspace || null);
     const project = currentWorkspace?.projects.find((p) => p.id === projectId);
     const teamMembers = project?.members || [];
@@ -22,7 +29,57 @@ export default function CreateTaskDialog({ showCreateTask, setShowCreateTask, pr
     const handleSubmit = async (e) => {
         e.preventDefault();
 
+        try {
+            setIsSubmitting(true);
+            const token = await getToken();
 
+            const response = await fetch(buildApiUrl(`/api/v1/tasks/${projectId}`), {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                    title: formData.title,
+                    description: formData.description,
+                    type: formData.type.toLowerCase(),
+                    status: formData.status.toLowerCase(),
+                    priority: formData.priority.toLowerCase(),
+                    assigneeId: formData.assigneeId || undefined,
+                    dueDate: formData.due_date || undefined,
+                }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || "Failed to create task");
+            }
+
+            const json = await response.json();
+            const created = json?.data;
+            
+            if (created) {
+                // The backend might not have populated the assignee yet for the newly created task
+                // We'll normalize it anyway
+                dispatch(addTask(normalizeTask(created)));
+            }
+
+            toast.success("Task created successfully");
+            setShowCreateTask(false);
+            setFormData({
+                title: "",
+                description: "",
+                type: "TASK",
+                status: "TODO",
+                priority: "MEDIUM",
+                assigneeId: "",
+                due_date: "",
+            });
+        } catch (error) {
+            toast.error(error.message);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return showCreateTask ? (

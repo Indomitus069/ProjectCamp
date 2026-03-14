@@ -1,0 +1,66 @@
+const nodemailer = require("nodemailer");
+
+const hasMailConfig = Boolean(process.env.MAIL_USER && process.env.MAIL_PASS);
+const isGmail = hasMailConfig && (
+  (process.env.MAIL_USER || "").includes("gmail.com") ||
+  (process.env.MAIL_USER || "").includes("googlemail.com")
+);
+// Use MAIL_HOST if set (e.g. smtp.gmail.com for Gmail/Workspace); else default by provider
+const defaultHost = isGmail ? "smtp.gmail.com" : "smtp.ethereal.email";
+const transporter = nodemailer.createTransport({
+  host: process.env.MAIL_HOST || defaultHost,
+  port: Number(process.env.MAIL_PORT) || 587,
+  secure: process.env.MAIL_SECURE === "true",
+  auth: hasMailConfig
+    ? {
+        user: process.env.MAIL_USER,
+        pass: process.env.MAIL_PASS,
+      }
+    : undefined,
+});
+
+if (!hasMailConfig) {
+  console.warn("Mail: MAIL_USER/MAIL_PASS not set. Invitation emails will not be sent. Add them to backend/.env for production or use Ethereal for testing.");
+}
+
+const from = process.env.MAIL_FROM || "ProjectCamp <noreply@projectcamp.dev>";
+const appUrl = process.env.CLIENT_URL || "http://localhost:5173";
+
+async function sendInvitationEmail({ to, inviterEmail, workspaceName, role, acceptUrl }) {
+  const roleLabel = role === "org:admin" ? "Admin" : "Member";
+  const subject = `You're invited to join ${workspaceName || "the team"} on ProjectCamp`;
+  const html = `
+    <div style="font-family: sans-serif; max-width: 560px; margin: 0 auto;">
+      <h2 style="color: #1f2937;">You're invited</h2>
+      <p style="color: #4b5563; line-height: 1.6;">
+        ${inviterEmail || "A team member"} has invited you to join <strong>${workspaceName || "the workspace"}</strong> on ProjectCamp as <strong>${roleLabel}</strong>.
+      </p>
+      <p style="color: #4b5563; line-height: 1.6;">
+        Sign up or log in to accept the invitation:
+      </p>
+      <p style="margin: 24px 0;">
+        <a href="${acceptUrl || appUrl}" style="display: inline-block; padding: 12px 24px; background: linear-gradient(to bottom right, #3b82f6, #2563eb); color: white; text-decoration: none; border-radius: 8px; font-weight: 500;">Accept Invitation</a>
+      </p>
+      <p style="color: #9ca3af; font-size: 14px;">
+        If you didn't expect this invitation, you can ignore this email.
+      </p>
+    </div>
+  `;
+
+  const mailOptions = {
+    from,
+    to,
+    subject,
+    html,
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    return { sent: true };
+  } catch (err) {
+    console.error("Invitation email send failed:", err.message);
+    return { sent: false, error: err.message };
+  }
+}
+
+module.exports = { sendInvitationEmail };

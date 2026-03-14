@@ -69,6 +69,16 @@ npm run dev
 
 Backend runs on [http://localhost:8000](http://localhost:8000).
 
+### Production Setup
+
+Build the frontend and start the backend from the project root:
+
+```bash
+npm run start:prod
+```
+
+When `dist/index.html` exists, the Express backend serves the built frontend so the app can run from a single origin in production.
+
 ### Environment Variables
 
 Create a `.env` file in the `backend/` directory:
@@ -86,6 +96,15 @@ SMTP_USER=your_email@example.com
 SMTP_PASS=your_email_password
 CLIENT_URL=http://localhost:5173
 ```
+
+Optional frontend env in the project root:
+
+```env
+VITE_CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key
+VITE_API_BASE_URL=https://your-api-domain.example.com
+```
+
+If `VITE_API_BASE_URL` is not set, the frontend uses the current origin. That is the recommended production setup when the backend serves the built app.
 
 ---
 

@@ -1,18 +1,26 @@
 import { format } from "date-fns";
 import { Plus, Save } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useDispatch } from "react-redux";
+import { useAuth } from "@clerk/clerk-react";
+import toast from "react-hot-toast";
 import AddProjectMember from "./AddProjectMember";
+import { buildApiUrl } from "../utils/api";
+import { normalizeProject } from "../utils/normalize";
+import { updateProject } from "../features/workspaceSlice";
 
 export default function ProjectSettings({ project }) {
+    const dispatch = useDispatch();
+    const { getToken } = useAuth();
 
     const [formData, setFormData] = useState({
-        name: "New Website Launch",
-        description: "Initial launch for new web platform.",
+        name: "",
+        description: "",
         status: "PLANNING",
         priority: "MEDIUM",
-        start_date: "2025-09-10",
-        end_date: "2025-10-15",
-        progress: 30,
+        start_date: null,
+        end_date: null,
+        progress: 0,
     });
 
     const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -20,11 +28,64 @@ export default function ProjectSettings({ project }) {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (!project?.id) return;
 
+        try {
+            setIsSubmitting(true);
+            const token = await getToken();
+            const response = await fetch(buildApiUrl(`/api/v1/projects/${project.id}`), {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                    name: formData.name,
+                    description: formData.description,
+                    status: formData.status.toLowerCase(),
+                    priority: formData.priority.toLowerCase(),
+                    progress: Number(formData.progress) || 0,
+                    startDate: formData.start_date ? new Date(formData.start_date).toISOString() : null,
+                    endDate: formData.end_date ? new Date(formData.end_date).toISOString() : null,
+                }),
+            });
+
+            const json = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                throw new Error(json?.message || "Failed to update project");
+            }
+
+            const updatedProject = normalizeProject(json?.data);
+            if (updatedProject) {
+                updatedProject.tasks = project.tasks || [];
+                updatedProject.members = project.members || [];
+                dispatch(updateProject(updatedProject));
+            }
+
+            toast.success("Project updated successfully");
+        } catch (error) {
+            toast.error(error.message || "Failed to update project");
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     useEffect(() => {
-        if (project) setFormData(project);
+        if (project) {
+            const start = project.start_date ? new Date(project.start_date) : null;
+            const end = project.end_date ? new Date(project.end_date) : null;
+            const status = (project.status || "PLANNING").toString().toUpperCase().replace(/\s/g, "_");
+            const priority = (project.priority || "MEDIUM").toString().toUpperCase();
+            setFormData({
+                name: project.name ?? "",
+                description: project.description ?? "",
+                status: status || "PLANNING",
+                priority: priority || "MEDIUM",
+                start_date: start,
+                end_date: end,
+                progress: project.progress ?? 0,
+            });
+        }
     }, [project]);
 
     const inputClasses = "w-full px-3 py-2 rounded mt-2 border text-sm dark:bg-zinc-900 border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-zinc-300";
@@ -78,11 +139,11 @@ export default function ProjectSettings({ project }) {
                     <div className="space-y-4 grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <label className={labelClasses}>Start Date</label>
-                            <input type="date" value={format(formData.start_date, "yyyy-MM-dd")} onChange={(e) => setFormData({ ...formData, start_date: new Date(e.target.value) })} className={inputClasses} />
+                            <input type="date" value={formData.start_date ? format(new Date(formData.start_date), "yyyy-MM-dd") : ""} onChange={(e) => setFormData({ ...formData, start_date: e.target.value ? new Date(e.target.value) : null })} className={inputClasses} />
                         </div>
                         <div className="space-y-2">
                             <label className={labelClasses}>End Date</label>
-                            <input type="date" value={format(formData.end_date, "yyyy-MM-dd")} onChange={(e) => setFormData({ ...formData, end_date: new Date(e.target.value) })} className={inputClasses} />
+                            <input type="date" value={formData.end_date ? format(new Date(formData.end_date), "yyyy-MM-dd") : ""} onChange={(e) => setFormData({ ...formData, end_date: e.target.value ? new Date(e.target.value) : null })} className={inputClasses} />
                         </div>
                     </div>
 
@@ -104,7 +165,7 @@ export default function ProjectSettings({ project }) {
                 <div className={cardClasses}>
                     <div className="flex items-center justify-between gap-4">
                         <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-300 mb-4">
-                            Team Members <span className="text-sm text-zinc-600 dark:text-zinc-400">({project.members.length})</span>
+                            Team Members <span className="text-sm text-zinc-600 dark:text-zinc-400">({(project.members || []).length})</span>
                         </h2>
                         <button type="button" onClick={() => setIsDialogOpen(true)} className="p-2 rounded-lg border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800" >
                             <Plus className="size-4 text-zinc-900 dark:text-zinc-300" />
@@ -113,15 +174,19 @@ export default function ProjectSettings({ project }) {
                     </div>
 
                     {/* Member List */}
-                    {project.members.length > 0 && (
+                    {(project.members || []).length > 0 ? (
                         <div className="space-y-2 mt-2 max-h-32 overflow-y-auto">
-                            {project.members.map((member, index) => (
+                            {(project.members || []).map((member, index) => (
                                 <div key={index} className="flex items-center justify-between px-3 py-2 rounded dark:bg-zinc-800 text-sm text-zinc-900 dark:text-zinc-300" >
                                     <span> {member?.user?.email || "Unknown"} </span>
-                                    {project.team_lead === member.user.id && <span className="px-2 py-0.5 rounded-xs ring ring-zinc-200 dark:ring-zinc-600">Team Lead</span>}
+                                    <span className="px-2 py-0.5 rounded-xs ring ring-zinc-200 dark:ring-zinc-600 capitalize">
+                                        {(member?.role || "member").replace("_", " ")}
+                                    </span>
                                 </div>
                             ))}
                         </div>
+                    ) : (
+                        <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-2">No team members yet. Add members to collaborate.</p>
                     )}
                 </div>
             </div>

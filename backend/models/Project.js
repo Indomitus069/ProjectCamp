@@ -20,6 +20,23 @@ const projectSchema = new mongoose.Schema(
       enum: ["active", "planning", "completed", "on_hold", "cancelled"],
       default: "active",
     },
+    priority: {
+      type: String,
+      enum: ["low", "medium", "high"],
+      default: "medium",
+    },
+    progress: {
+      type: Number,
+      min: 0,
+      max: 100,
+      default: 0,
+    },
+    startDate: {
+      type: Date,
+    },
+    endDate: {
+      type: Date,
+    },
   },
   { timestamps: true }
 );

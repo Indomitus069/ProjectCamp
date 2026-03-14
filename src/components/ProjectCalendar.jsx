@@ -16,19 +16,34 @@ const priorityBorders = {
     HIGH: "border-orange-300 dark:border-orange-500",
 };
 
+const toTaskDate = (value) => {
+    if (!value) return null;
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
 const ProjectCalendar = ({ tasks }) => {
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [currentMonth, setCurrentMonth] = useState(new Date());
 
     const today = new Date();
-    const getTasksForDate = (date) => tasks.filter((task) => isSameDay(task.due_date, date));
+    const getTasksForDate = (date) => tasks.filter((task) => {
+        const dueDate = toTaskDate(task.due_date);
+        return dueDate ? isSameDay(dueDate, date) : false;
+    });
 
     const upcomingTasks = tasks
-        .filter((task) => task.due_date && !isBefore(task.due_date, today) && task.status !== "DONE")
+        .filter((task) => {
+            const dueDate = toTaskDate(task.due_date);
+            return dueDate && !isBefore(dueDate, today) && task.status !== "DONE";
+        })
         .sort((a, b) => new Date(a.due_date) - new Date(b.due_date))
         .slice(0, 5);
 
-    const overdueTasks = tasks.filter((task) => task.due_date && isBefore(task.due_date, today) && task.status !== "DONE");
+    const overdueTasks = tasks.filter((task) => {
+        const dueDate = toTaskDate(task.due_date);
+        return dueDate && isBefore(dueDate, today) && task.status !== "DONE";
+    });
 
     const daysInMonth = eachDayOfInterval({
         start: startOfMonth(currentMonth),
@@ -70,7 +85,10 @@ const ProjectCalendar = ({ tasks }) => {
                         {daysInMonth.map((day) => {
                             const dayTasks = getTasksForDate(day);
                             const isSelected = isSameDay(day, selectedDate);
-                            const hasOverdue = dayTasks.some((t) => t.status !== "DONE" && isBefore(t.due_date, today));
+                            const hasOverdue = dayTasks.some((t) => {
+                                const dueDate = toTaskDate(t.due_date);
+                                return t.status !== "DONE" && dueDate ? isBefore(dueDate, today) : false;
+                            });
 
                             return (
                                 <button
@@ -146,7 +164,8 @@ const ProjectCalendar = ({ tasks }) => {
                                             {task.type}
                                         </span>
                                     </div>
-                                    <p className="text-xs text-zinc-600 dark:text-zinc-400">{format(task.due_date, "MMM d")}</p>
+                                    <p className="text-xs text-zinc-600 dark:text-zinc-400">{format(toTaskDate(task.due_date), "MMM d")}</p>
+                                    
                                 </div>
                             ))}
                         </div>
@@ -169,7 +188,7 @@ const ProjectCalendar = ({ tasks }) => {
                                         </span>
                                     </div>
                                     <p className="text-xs text-red-600 dark:text-red-300">
-                                        Due {format(task.due_date, "MMM d")}
+                                        Due {format(toTaskDate(task.due_date), "MMM d")}
                                     </p>
                                 </div>
                             ))}

@@ -6,8 +6,29 @@ import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
   globalIgnores(['dist']),
+
   {
-    files: ['**/*.{js,jsx}'],
+    files: ['backend/**/*.{js,jsx}'],
+    languageOptions: {
+      ecmaVersion: 2020,
+      globals: {
+        ...globals.node,
+        process: 'readonly',
+        module: 'readonly',
+        require: 'readonly',
+      },
+      parserOptions: {
+        ecmaVersion: 'latest',
+        sourceType: 'script',
+      },
+    },
+    rules: {
+      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+    },
+  },
+
+  {
+    files: ['src/**/*.{js,jsx}', 'vite.config.js'],
     extends: [
       js.configs.recommended,
       reactHooks.configs['recommended-latest'],

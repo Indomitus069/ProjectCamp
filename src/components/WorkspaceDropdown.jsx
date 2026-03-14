@@ -3,7 +3,6 @@ import { ChevronDown, Check, Plus } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { setCurrentWorkspace } from "../features/workspaceSlice";
 import { useNavigate } from "react-router-dom";
-import { dummyWorkspaces } from "../assets/assets";
 
 function WorkspaceDropdown() {
 
@@ -55,16 +54,18 @@ function WorkspaceDropdown() {
                         <p className="text-xs text-gray-500 dark:text-zinc-400 uppercase tracking-wider mb-2 px-2">
                             Workspaces
                         </p>
-                        {dummyWorkspaces.map((ws) => (
+                        {workspaces.map((ws) => (
                             <div key={ws.id} onClick={() => onSelectWorkspace(ws.id)} className="flex items-center gap-3 p-2 cursor-pointer rounded hover:bg-gray-100 dark:hover:bg-zinc-800" >
                                 <img src={ws.image_url} alt={ws.name} className="w-6 h-6 rounded" />
                                 <div className="flex-1 min-w-0">
                                     <p className="text-sm font-medium text-gray-800 dark:text-white truncate">
                                         {ws.name}
                                     </p>
-                                    <p className="text-xs text-gray-500 dark:text-zinc-400 truncate">
-                                        {ws.membersCount || 0} members
-                                    </p>
+                                    {typeof ws.membersCount === "number" && (
+                                        <p className="text-xs text-gray-500 dark:text-zinc-400 truncate">
+                                            {ws.membersCount} members
+                                        </p>
+                                    )}
                                 </div>
                                 {currentWorkspace?.id === ws.id && (
                                     <Check className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />

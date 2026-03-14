@@ -2,6 +2,8 @@ node_modules/
 dist/
 .env
 .env.*
+!.env.example
+!backend/.env.example
 
 # Logs
 npm-debug.log*
@@ -19,4 +21,3 @@ Thumbs.db
 
 # Test coverage
 coverage/
-

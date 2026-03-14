@@ -40,12 +40,14 @@ const ProjectAnalytics = ({ project, tasks }) => {
 
         return {
             stats,
-            statusData: Object.entries(statusMap).map(([k, v]) => ({ name: k.replace("_", " "), value: v })),
-            typeData: Object.entries(typeMap).filter(([_, v]) => v > 0).map(([k, v]) => ({ name: k, value: v })),
-            priorityData: Object.entries(priorityMap).map(([k, v]) => ({
-                name: k,
-                value: v,
-                percentage: total > 0 ? Math.round((v / total) * 100) : 0,
+            statusData: Object.entries(statusMap).map(([key, value]) => ({ name: key.replace("_", " "), value })),
+            typeData: Object.entries(typeMap)
+                .filter(([, value]) => value > 0)
+                .map(([key, value]) => ({ name: key, value })),
+            priorityData: Object.entries(priorityMap).map(([key, value]) => ({
+                name: key,
+                value,
+                percentage: total > 0 ? Math.round((value / total) * 100) : 0,
             })),
         };
     }, [tasks]);
@@ -126,7 +128,7 @@ const ProjectAnalytics = ({ project, tasks }) => {
                 <div className="not-dark:bg-white dark:bg-gradient-to-br dark:from-zinc-800/70 dark:to-zinc-900/50 border border-zinc-300 dark:border-zinc-800 rounded-lg p-6">
                     <h2 className="text-zinc-900 dark:text-white mb-4 font-medium">Tasks by Type</h2>
                     <ResponsiveContainer width="100%" height={300}>
-                        <PieChart>
+                                <PieChart>
                             <Pie
                                 data={typeData}
                                 dataKey="value"
@@ -136,8 +138,8 @@ const ProjectAnalytics = ({ project, tasks }) => {
                                 outerRadius={100}
                                 label={({ name, value }) => `${name}: ${value}`}
                             >
-                                {typeData.map((_, i) => (
-                                    <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                                {typeData.map((slice, i) => (
+                                    <Cell key={slice.name || i} fill={COLORS[i % COLORS.length]} />
                                 ))}
                             </Pie>
                         </PieChart>

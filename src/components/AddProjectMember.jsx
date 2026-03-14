@@ -1,9 +1,15 @@
 import { useState } from "react";
 import { Mail, UserPlus } from "lucide-react";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
+import { useAuth } from "@clerk/clerk-react";
+import toast from "react-hot-toast";
 import { useSearchParams } from "react-router-dom";
+import { buildApiUrl } from "../utils/api";
+import { addProjectMember as addProjectMemberAction } from "../features/workspaceSlice";
 
 const AddProjectMember = ({ isDialogOpen, setIsDialogOpen }) => {
+    const dispatch = useDispatch();
+    const { getToken } = useAuth();
 
     const [searchParams] = useSearchParams();
 
@@ -12,14 +18,45 @@ const AddProjectMember = ({ isDialogOpen, setIsDialogOpen }) => {
     const currentWorkspace = useSelector((state) => state.workspace?.currentWorkspace || null);
 
     const project = currentWorkspace?.projects.find((p) => p.id === id);
-    const projectMembersEmails = project?.members.map((member) => member.user.email);
+    const projectMembersEmails = project?.members?.map((member) => member.user.email) || [];
+    const availableMembers = (currentWorkspace?.members || []).filter(
+        (member) => !projectMembersEmails.includes(member?.user?.email)
+    );
 
     const [email, setEmail] = useState('');
     const [isAdding, setIsAdding] = useState(false);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        
+
+        if (!project?.id || !email) return;
+
+        try {
+            setIsAdding(true);
+            const token = await getToken();
+            const response = await fetch(buildApiUrl(`/api/v1/projects/${project.id}/members`), {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({ email, role: "member" }),
+            });
+
+            const json = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                throw new Error(json?.message || "Failed to add project member");
+            }
+
+            dispatch(addProjectMemberAction({ projectId: project.id, member: json.data }));
+            toast.success("Project member added");
+            setEmail("");
+            setIsDialogOpen(false);
+        } catch (error) {
+            toast.error(error.message || "Failed to add project member");
+        } finally {
+            setIsAdding(false);
+        }
     };
 
     if (!isDialogOpen) return null;
@@ -51,13 +88,17 @@ const AddProjectMember = ({ isDialogOpen, setIsDialogOpen }) => {
                             {/* List All non project members from current workspace */}
                             <select value={email} onChange={(e) => setEmail(e.target.value)} className="pl-10 mt-1 w-full rounded border border-zinc-300 dark:border-zinc-700 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-200 text-sm placeholder-zinc-400 dark:placeholder-zinc-500 py-2 focus:outline-none focus:border-blue-500" required >
                                 <option value="">Select a member</option>
-                                {currentWorkspace?.members
-                                    .filter((member) => !projectMembersEmails.includes(member.user.email))
+                                {availableMembers
                                     .map((member) => (
                                         <option key={member.user.id} value={member.user.email}> {member.user.email} </option>
                                     ))}
                             </select>
                         </div>
+                        {availableMembers.length === 0 && (
+                            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2">
+                                No additional workspace members are available yet. Invite teammates from the Team page first.
+                            </p>
+                        )}
                     </div>
 
                     {/* Footer */}
@@ -65,7 +106,7 @@ const AddProjectMember = ({ isDialogOpen, setIsDialogOpen }) => {
                         <button type="button" onClick={() => setIsDialogOpen(false)} className="px-5 py-2 text-sm rounded border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-zinc-800 transition" >
                             Cancel
                         </button>
-                        <button type="submit" disabled={isAdding || !currentWorkspace} className="px-5 py-2 text-sm rounded bg-gradient-to-br from-blue-500 to-blue-600 hover:opacity-90 text-white disabled:opacity-50 transition" >
+                        <button type="submit" disabled={isAdding || !currentWorkspace || availableMembers.length === 0} className="px-5 py-2 text-sm rounded bg-gradient-to-br from-blue-500 to-blue-600 hover:opacity-90 text-white disabled:opacity-50 transition" >
                             {isAdding ? "Adding..." : "Add Member"}
                         </button>
                     </div>
