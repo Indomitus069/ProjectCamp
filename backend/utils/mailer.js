@@ -25,6 +25,27 @@ if (!hasMailConfig) {
 
 const from = process.env.MAIL_FROM || "ProjectCamp <noreply@projectcamp.dev>";
 const appUrl = process.env.CLIENT_URL || "http://localhost:5173";
+let mailTransportVerified = false;
+
+async function verifyMailTransport() {
+  if (!hasMailConfig) {
+    return { ok: false, error: "MAIL_USER/MAIL_PASS not set" };
+  }
+
+  if (mailTransportVerified) {
+    return { ok: true };
+  }
+
+  try {
+    await transporter.verify();
+    mailTransportVerified = true;
+    console.log(`Mail transport verified for ${process.env.MAIL_USER}`);
+    return { ok: true };
+  } catch (err) {
+    console.error("Mail transport verification failed:", err.message);
+    return { ok: false, error: err.message };
+  }
+}
 
 async function sendInvitationEmail({ to, inviterEmail, workspaceName, role, acceptUrl }) {
   const roleLabel = role === "org:admin" ? "Admin" : "Member";
@@ -55,12 +76,30 @@ async function sendInvitationEmail({ to, inviterEmail, workspaceName, role, acce
   };
 
   try {
-    await transporter.sendMail(mailOptions);
-    return { sent: true };
+    const verification = await verifyMailTransport();
+    if (!verification.ok) {
+      return { sent: false, error: verification.error || "Mail transport is not configured correctly" };
+    }
+
+    console.log(`Sending invitation email to ${to}`);
+    const info = await transporter.sendMail(mailOptions);
+    const accepted = Array.isArray(info.accepted) ? info.accepted : [];
+    const rejected = Array.isArray(info.rejected) ? info.rejected : [];
+
+    if (accepted.length === 0) {
+      const error = rejected.length > 0
+        ? `Mail rejected for recipient(s): ${rejected.join(", ")}`
+        : "Mail provider did not accept the message";
+      console.error("Invitation email send failed:", error);
+      return { sent: false, error };
+    }
+
+    console.log(`Invitation email sent to ${accepted.join(", ")} (messageId: ${info.messageId})`);
+    return { sent: true, accepted, messageId: info.messageId };
   } catch (err) {
     console.error("Invitation email send failed:", err.message);
     return { sent: false, error: err.message };
   }
 }
 
-module.exports = { sendInvitationEmail };
+module.exports = { sendInvitationEmail, verifyMailTransport };

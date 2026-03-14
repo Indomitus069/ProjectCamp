@@ -7,6 +7,7 @@ const path = require("path");
 const { clerkMiddleware } = require("@clerk/express");
 const connectDB = require("./config/db");
 const ApiError = require("./utils/apiError");
+const { verifyMailTransport } = require("./utils/mailer");
 
 const app = express();
 const distDir = path.resolve(__dirname, "../dist");
@@ -69,6 +70,10 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 8000;
 
 connectDB().then(() => {
+  verifyMailTransport().catch((error) => {
+    console.error("Mail transport startup check failed:", error?.message || error);
+  });
+
   const server = app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
   });

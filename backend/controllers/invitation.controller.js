@@ -39,15 +39,18 @@ const createInvitation = asyncHandler(async (req, res) => {
   // Send invitation email (non-blocking; log failure but don't fail the request)
   const workspaceName = "My Workspace";
   const inviter = await User.findOne({ clerkId: userId }).lean();
-  sendInvitationEmail({
+  const mailResult = await sendInvitationEmail({
     to: normalizedEmail,
     inviterEmail: inviter?.email || null,
     workspaceName,
     role: invRole,
     acceptUrl: `${process.env.CLIENT_URL || "http://localhost:5173"}/accept-invitation?invitationId=${invitation._id}`,
-  }).then((result) => {
-    if (!result.sent) console.error("Invitation email failed:", result.error);
   });
+
+  if (!mailResult.sent) {
+    await Invitation.findByIdAndDelete(invitation._id);
+    throw new ApiError(502, `Invitation email could not be sent: ${mailResult.error || "unknown mail error"}`);
+  }
 
   return res
     .status(201)
