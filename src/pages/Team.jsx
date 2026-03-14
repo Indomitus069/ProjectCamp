@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { UsersIcon, Search, UserPlus, Shield, Activity, Mail, Clock, CheckCircle } from "lucide-react";
+import { UsersIcon, Search, UserPlus, Shield, Activity, Mail, Clock, CheckCircle, Link as LinkIcon, Copy } from "lucide-react";
 import InviteMemberDialog from "../components/InviteMemberDialog";
 import { useSelector } from "react-redux";
 import { useAuth } from "@clerk/clerk-react";
 import { buildApiUrl } from "../utils/api";
+import toast from "react-hot-toast";
 
 const Team = () => {
 
@@ -68,6 +69,17 @@ const Team = () => {
             return "Admin";
         }
         return "Member";
+    };
+
+    const handleCopyInvitationLink = async (invitationId) => {
+        const invitationUrl = `${window.location.origin}/accept-invitation?invitationId=${invitationId}`;
+
+        try {
+            await navigator.clipboard.writeText(invitationUrl);
+            toast.success("Invitation link copied");
+        } catch {
+            toast.error("Could not copy invitation link");
+        }
     };
 
     return (
@@ -159,6 +171,7 @@ const Team = () => {
                                     <th className="px-4 py-2.5 text-left font-medium text-sm text-gray-700 dark:text-zinc-300">Role</th>
                                     <th className="px-4 py-2.5 text-left font-medium text-sm text-gray-700 dark:text-zinc-300">Status</th>
                                     <th className="px-4 py-2.5 text-left font-medium text-sm text-gray-700 dark:text-zinc-300">Sent</th>
+                                    <th className="px-4 py-2.5 text-left font-medium text-sm text-gray-700 dark:text-zinc-300">Link</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-200 dark:divide-zinc-800 bg-white dark:bg-zinc-950">
@@ -182,12 +195,32 @@ const Team = () => {
                                         <td className="px-4 py-2.5 text-sm text-gray-500 dark:text-zinc-400">
                                             {inv.createdAt ? new Date(inv.createdAt).toLocaleDateString() : "—"}
                                         </td>
+                                        <td className="px-4 py-2.5 text-sm">
+                                            <button
+                                                type="button"
+                                                onClick={() => handleCopyInvitationLink(inv._id || inv.id)}
+                                                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md border border-zinc-300 dark:border-zinc-700 text-gray-700 dark:text-zinc-300 hover:bg-gray-100 dark:hover:bg-zinc-800"
+                                            >
+                                                <Copy className="size-3.5" />
+                                                Copy link
+                                            </button>
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>
                         </table>
                     </div>
                 )}
+            </div>
+
+            <div className="rounded-md border border-blue-200 dark:border-blue-900/60 bg-blue-50 dark:bg-blue-950/30 px-4 py-3 text-sm text-blue-800 dark:text-blue-200">
+                <p className="flex items-center gap-2 font-medium">
+                    <LinkIcon className="size-4" />
+                    No domain for email yet? Use copied invite links.
+                </p>
+                <p className="mt-1 text-blue-700 dark:text-blue-300">
+                    Create an invitation, then copy its acceptance link from the table and send it manually to your teammate.
+                </p>
             </div>
 
             {/* Team Members */}
