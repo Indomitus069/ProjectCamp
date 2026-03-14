@@ -7,10 +7,18 @@ const isGmail = hasMailConfig && (
 );
 // Use MAIL_HOST if set (e.g. smtp.gmail.com for Gmail/Workspace); else default by provider
 const defaultHost = isGmail ? "smtp.gmail.com" : "smtp.ethereal.email";
+const smtpConnectionTimeout = Number(process.env.MAIL_CONNECTION_TIMEOUT) || 15000;
+const smtpGreetingTimeout = Number(process.env.MAIL_GREETING_TIMEOUT) || 10000;
+const smtpSocketTimeout = Number(process.env.MAIL_SOCKET_TIMEOUT) || 20000;
+const smtpDnsTimeout = Number(process.env.MAIL_DNS_TIMEOUT) || 10000;
 const transporter = nodemailer.createTransport({
   host: process.env.MAIL_HOST || defaultHost,
   port: Number(process.env.MAIL_PORT) || 587,
   secure: process.env.MAIL_SECURE === "true",
+  connectionTimeout: smtpConnectionTimeout,
+  greetingTimeout: smtpGreetingTimeout,
+  socketTimeout: smtpSocketTimeout,
+  dnsTimeout: smtpDnsTimeout,
   auth: hasMailConfig
     ? {
         user: process.env.MAIL_USER,
@@ -21,6 +29,10 @@ const transporter = nodemailer.createTransport({
 
 if (!hasMailConfig) {
   console.warn("Mail: MAIL_USER/MAIL_PASS not set. Invitation emails will not be sent. Add them to backend/.env for production or use Ethereal for testing.");
+} else {
+  console.log(
+    `Mail transport configured for ${process.env.MAIL_USER} using ${(process.env.MAIL_HOST || defaultHost)}:${Number(process.env.MAIL_PORT) || 587}`
+  );
 }
 
 const from = process.env.MAIL_FROM || "ProjectCamp <noreply@projectcamp.dev>";

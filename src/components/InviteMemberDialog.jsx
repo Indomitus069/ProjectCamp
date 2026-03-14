@@ -19,6 +19,8 @@ const InviteMemberDialog = ({ isDialogOpen, setIsDialogOpen, onSuccess }) => {
         e.preventDefault();
         setError("");
         setIsSubmitting(true);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000);
         try {
             const token = await getToken();
             if (!token) {
@@ -32,6 +34,7 @@ const InviteMemberDialog = ({ isDialogOpen, setIsDialogOpen, onSuccess }) => {
                     "Content-Type": "application/json",
                     Authorization: `Bearer ${token}`,
                 },
+                signal: controller.signal,
                 body: JSON.stringify({
                     email: formData.email.trim(),
                     role: formData.role,
@@ -48,12 +51,17 @@ const InviteMemberDialog = ({ isDialogOpen, setIsDialogOpen, onSuccess }) => {
             setIsDialogOpen(false);
         } catch (err) {
             const msg = err?.message || "Something went wrong. Please try again.";
+            if (err?.name === "AbortError") {
+                setError("Invitation timed out while contacting the mail server. Check Render logs for the SMTP error and try again.");
+                return;
+            }
             setError(
                 msg.includes("fetch") || msg.includes("Network")
                     ? "Cannot reach the server. Check that the API is running and reachable from this environment."
                     : msg
             );
         } finally {
+            clearTimeout(timeoutId);
             setIsSubmitting(false);
         }
     };
