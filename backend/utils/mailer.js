@@ -1,4 +1,9 @@
 const nodemailer = require("nodemailer");
+const dns = require("dns");
+
+if (typeof dns.setDefaultResultOrder === "function") {
+  dns.setDefaultResultOrder("ipv4first");
+}
 
 const hasMailConfig = Boolean(process.env.MAIL_USER && process.env.MAIL_PASS);
 const isGmail = hasMailConfig && (
@@ -15,6 +20,7 @@ const transporter = nodemailer.createTransport({
   host: process.env.MAIL_HOST || defaultHost,
   port: Number(process.env.MAIL_PORT) || 587,
   secure: process.env.MAIL_SECURE === "true",
+  family: 4,
   connectionTimeout: smtpConnectionTimeout,
   greetingTimeout: smtpGreetingTimeout,
   socketTimeout: smtpSocketTimeout,
