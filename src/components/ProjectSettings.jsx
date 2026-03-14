@@ -52,6 +52,9 @@ export default function ProjectSettings({ project }) {
 
             const json = await response.json().catch(() => ({}));
             if (!response.ok) {
+                if (response.status === 403) {
+                    throw new Error("You do not have permission to update this project.");
+                }
                 throw new Error(json?.message || "Failed to update project");
             }
 
