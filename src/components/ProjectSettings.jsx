@@ -30,6 +30,16 @@ export default function ProjectSettings({ project }) {
         e.preventDefault();
         if (!project?.id) return;
 
+        if (!formData.start_date || !formData.end_date) {
+            toast.error("Start date and end date are required");
+            return;
+        }
+
+        if (new Date(formData.end_date) < new Date(formData.start_date)) {
+            toast.error("End date cannot be before the start date");
+            return;
+        }
+
         try {
             setIsSubmitting(true);
             const token = await getToken();
@@ -142,11 +152,11 @@ export default function ProjectSettings({ project }) {
                     <div className="space-y-4 grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <label className={labelClasses}>Start Date</label>
-                            <input type="date" value={formData.start_date ? format(new Date(formData.start_date), "yyyy-MM-dd") : ""} onChange={(e) => setFormData({ ...formData, start_date: e.target.value ? new Date(e.target.value) : null })} className={inputClasses} />
+                            <input type="date" value={formData.start_date ? format(new Date(formData.start_date), "yyyy-MM-dd") : ""} onChange={(e) => setFormData({ ...formData, start_date: e.target.value ? new Date(e.target.value) : null })} className={inputClasses} required />
                         </div>
                         <div className="space-y-2">
                             <label className={labelClasses}>End Date</label>
-                            <input type="date" value={formData.end_date ? format(new Date(formData.end_date), "yyyy-MM-dd") : ""} onChange={(e) => setFormData({ ...formData, end_date: e.target.value ? new Date(e.target.value) : null })} className={inputClasses} />
+                            <input type="date" value={formData.end_date ? format(new Date(formData.end_date), "yyyy-MM-dd") : ""} onChange={(e) => setFormData({ ...formData, end_date: e.target.value ? new Date(e.target.value) : null })} min={formData.start_date ? format(new Date(formData.start_date), "yyyy-MM-dd") : undefined} className={inputClasses} required />
                         </div>
                     </div>
 

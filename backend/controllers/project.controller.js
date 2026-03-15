@@ -6,6 +6,25 @@ const ApiResponse = require("../utils/apiResponse");
 const ApiError = require("../utils/apiError");
 const asyncHandler = require("../utils/asyncHandler");
 
+const parseAndValidateProjectDates = (startDate, endDate) => {
+  if (!startDate || !endDate) {
+    throw new ApiError(400, "Project start date and end date are required");
+  }
+
+  const parsedStartDate = new Date(startDate);
+  const parsedEndDate = new Date(endDate);
+
+  if (Number.isNaN(parsedStartDate.getTime()) || Number.isNaN(parsedEndDate.getTime())) {
+    throw new ApiError(400, "Project dates must be valid dates");
+  }
+
+  if (parsedEndDate < parsedStartDate) {
+    throw new ApiError(400, "Project end date cannot be before the start date");
+  }
+
+  return { parsedStartDate, parsedEndDate };
+};
+
 const mapUser = (user, fallbackId) => ({
   id: user?.clerkId || fallbackId,
   email: user?.email || "Unknown",
@@ -39,6 +58,8 @@ const createProject = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Project name is required");
   }
 
+  const { parsedStartDate, parsedEndDate } = parseAndValidateProjectDates(startDate, endDate);
+
   const project = await Project.create({
     name,
     description,
@@ -46,8 +67,8 @@ const createProject = asyncHandler(async (req, res) => {
     ...(status ? { status } : {}),
     ...(priority ? { priority } : {}),
     ...(progress != null ? { progress } : {}),
-    ...(startDate ? { startDate } : {}),
-    ...(endDate ? { endDate } : {}),
+    startDate: parsedStartDate,
+    endDate: parsedEndDate,
   });
 
   // Automatically make creator the admin
@@ -122,24 +143,30 @@ const updateProject = asyncHandler(async (req, res) => {
   const { projectId } = req.params;
   const { name, description, status, priority, progress, startDate, endDate } = req.body;
 
+  const existingProject = await Project.findById(projectId);
+
+  if (!existingProject) {
+    throw new ApiError(404, "Project not found");
+  }
+
+  const resolvedStartDate = startDate !== undefined ? startDate : existingProject.startDate;
+  const resolvedEndDate = endDate !== undefined ? endDate : existingProject.endDate;
+  const { parsedStartDate, parsedEndDate } = parseAndValidateProjectDates(resolvedStartDate, resolvedEndDate);
+
   const updateData = {};
   if (name !== undefined) updateData.name = name;
   if (description !== undefined) updateData.description = description;
   if (status !== undefined) updateData.status = status;
   if (priority !== undefined) updateData.priority = priority;
   if (progress !== undefined) updateData.progress = progress;
-  if (startDate !== undefined) updateData.startDate = startDate;
-  if (endDate !== undefined) updateData.endDate = endDate;
+  updateData.startDate = parsedStartDate;
+  updateData.endDate = parsedEndDate;
 
   const project = await Project.findByIdAndUpdate(
     projectId,
     updateData,
     { new: true, runValidators: true }
   );
-
-  if (!project) {
-    throw new ApiError(404, "Project not found");
-  }
 
   return res
     .status(200)
