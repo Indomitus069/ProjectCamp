@@ -3,6 +3,7 @@ import { Mail, UserPlus } from "lucide-react";
 import { useSelector } from "react-redux";
 import { useAuth } from "@clerk/clerk-react";
 import { buildApiUrl } from "../utils/api";
+import toast from "react-hot-toast";
 
 const InviteMemberDialog = ({ isDialogOpen, setIsDialogOpen, onSuccess }) => {
 
@@ -46,6 +47,7 @@ const InviteMemberDialog = ({ isDialogOpen, setIsDialogOpen, onSuccess }) => {
                 setError(data?.message || "Failed to send invitation.");
                 return;
             }
+            toast.success(data?.message || "Invitation sent successfully");
             setFormData({ email: "", role: "org:member" });
             if (typeof onSuccess === "function") onSuccess();
             setIsDialogOpen(false);
