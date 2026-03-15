@@ -1,131 +1,262 @@
-<div align="center">
-  <h1>🏕️ ProjectCamp</h1>
-  <p>
-    An open-source project management platform built with ReactJS, Tailwind CSS, and Express.js.
-  </p>
-</div>
+# ProjectCamp
 
----
+ProjectCamp is a full-stack project management app for small software teams. It combines project planning, task tracking, team management, invitations, and a Jira-style ticket board in one deployment.
 
-## 📖 Table of Contents
+The frontend is built with React, Vite, Tailwind CSS, Redux Toolkit, and Clerk. The backend is an Express API backed by MongoDB and serves the production frontend build from the same origin.
 
-- [✨ Features](#-features)
-- [🛠️ Tech Stack](#-tech-stack)
-- [🚀 Getting Started](#-getting-started)
-- [📜 License](#-license)
-- [👤 Maintainer](#-maintainer)
+## What the app does
 
----
+- Create and manage projects with required start and end dates
+- Track tasks with status, assignee, priority, due date, and comments
+- Manage project members and workspace-level invitations
+- Use a Jira-style ticket board for bugs, support, incidents, and feature requests
+- Comment on tickets and tasks for handoffs and discussion
+- View dashboard and team-level summaries
+- Run as a single production app from one Node service
 
-## ✨ Features
+## Current feature set
 
-- **Multiple Workspaces:** Create workspaces with their own projects, tasks, and members
-- **Project Management:** Manage projects, tasks, and team members
-- **Analytics:** View project analytics — progress, completion rate, and team size
-- **Task Management:** Assign tasks, set due dates, track status (Todo, In Progress, Done)
-- **Subtask Management:** Break tasks into subtasks with completion tracking
-- **Project Notes:** Add and manage notes within projects
-- **User Management:** Invite members, manage roles (Admin, Project Admin, Member)
-- **Authentication:** JWT-based auth with email verification and password reset
-- **File Attachments:** Upload and attach files to tasks
+### Projects
 
-## 🛠️ Tech Stack
+- Create, update, and delete projects
+- Required project timeline validation
+- Project status, priority, progress, start date, and end date
+- Project member management
 
-**Frontend:**
-- ReactJS
-- Tailwind CSS
+### Tasks
+
+- Create, update, and delete tasks
+- Filter by status, type, priority, and assignee
+- Task detail view with comments
+- Subtasks support in the stored task model
+
+### Tickets
+
+- Jira-style status board
+- Ticket categories: bug, feature request, support, incident, other
+- Ticket priorities: low, medium, high, urgent
+- Ticket discussion/comments
+- Ticket editing, reassignment, and deletion
+- Ticket access scoped to project membership
+
+### Team and invitations
+
+- Team directory from real project membership data
+- Invitation records stored in MongoDB
+- Manual invite-link fallback for no-domain setups
+- Email sending via Resend for Render-friendly deployments
+
+### Auth and deployment
+
+- Clerk authentication
+- MongoDB persistence
+- Express serves the built frontend in production
+- Render deployment supported
+
+## Tech stack
+
+### Frontend
+
+- React 19
+- Vite
+- Tailwind CSS 4
 - Redux Toolkit
-- Lucide React (icons)
-- Vite (build tool)
+- React Router
+- Clerk React
+- date-fns
+- lucide-react
+- recharts
 
-**Backend:**
-- Node.js + Express.js
-- MongoDB + Mongoose
-- JWT Authentication
-- Multer (file uploads)
+### Backend
 
-## 🚀 Getting Started
+- Node.js
+- Express
+- MongoDB with Mongoose
+- Clerk Express middleware
+- Nodemailer
 
-### Prerequisites
-- Node.js (v18+)
-- MongoDB instance (local or Atlas)
+## Repo layout
 
-### Frontend Setup
+```text
+ProjectCamp/
+|-- src/                # React frontend
+|-- backend/            # Express API
+|-- dist/               # Production frontend build (generated)
+|-- package.json        # Frontend/root scripts
+`-- backend/package.json
+```
+
+## Scripts
+
+### Root
+
+```bash
+npm run dev         # frontend dev server
+npm run build       # production frontend build
+npm run lint        # lint frontend
+npm start           # start backend
+npm run start:prod  # build frontend, then start backend
+```
+
+### Backend
+
+```bash
+npm --prefix backend run dev
+npm --prefix backend start
+```
+
+## Local setup
+
+### 1. Install dependencies
 
 ```bash
 npm install
-npm run dev
+npm --prefix backend install
 ```
 
-Open [http://localhost:5173](http://localhost:5173) to view the frontend.
+### 2. Configure environment
 
-### Backend Setup
+Create these files from the examples:
 
 ```bash
-cd backend
-npm install
+cp .env.example .env
+cp backend/.env.example backend/.env
+```
+
+Windows PowerShell:
+
+```powershell
+Copy-Item .env.example .env
+Copy-Item backend\.env.example backend\.env
+```
+
+### 3. Required environment variables
+
+Frontend `.env`:
+
+```env
+VITE_CLERK_PUBLISHABLE_KEY=pk_test_your_clerk_publishable_key
+```
+
+Backend `backend/.env`:
+
+```env
+PORT=8000
+MONGODB_URI=mongodb://localhost:27017/projectcamp
+CLIENT_URL=http://localhost:5173
+
+CLERK_PUBLISHABLE_KEY=pk_test_your_publishable_key
+CLERK_SECRET_KEY=sk_test_your_clerk_secret_key
+CLERK_WEBHOOK_SECRET=whsec_your_webhook_secret
+
+RESEND_API_KEY=re_your_resend_api_key
+MAIL_FROM=ProjectCamp <onboarding@resend.dev>
+```
+
+Optional SMTP fallback:
+
+```env
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=587
+MAIL_SECURE=false
+MAIL_USER=your.email@gmail.com
+MAIL_PASS=your-16-char-app-password
+```
+
+### 4. Run in development
+
+Frontend:
+
+```bash
 npm run dev
 ```
 
-Backend runs on [http://localhost:8000](http://localhost:8000).
+Backend:
 
-### Production Setup
+```bash
+npm --prefix backend run dev
+```
 
-Build the frontend and start the backend from the project root:
+Default local URLs:
+
+- Frontend: `http://localhost:5173`
+- Backend: `http://localhost:8000`
+
+### 5. Run as a single production app locally
 
 ```bash
 npm run start:prod
 ```
 
-When `dist/index.html` exists, the Express backend serves the built frontend so the app can run from a single origin in production.
+When `dist/index.html` exists, the backend serves the frontend build so the app runs from one origin.
 
-### Environment Variables
+## Production deployment
 
-Create a `.env` file in the `backend/` directory:
+ProjectCamp is designed to run as one Node web service with MongoDB and Clerk.
 
-```env
-PORT=8000
-MONGODB_URI=mongodb://localhost:27017/projectcamp
-JWT_SECRET=your_jwt_secret
-JWT_REFRESH_SECRET=your_jwt_refresh_secret
-JWT_EXPIRY=1d
-JWT_REFRESH_EXPIRY=7d
-SMTP_HOST=smtp.example.com
-SMTP_PORT=587
-SMTP_USER=your_email@example.com
-SMTP_PASS=your_email_password
-CLIENT_URL=http://localhost:5173
+### Recommended Render setup
+
+Build command:
+
+```bash
+npm install --include=dev --include=optional && npm install @rollup/rollup-linux-x64-gnu lightningcss-linux-x64-gnu @tailwindcss/oxide-linux-x64-gnu --no-save && npm --prefix backend install && npm run build
 ```
 
-Optional frontend env in the project root:
+Start command:
+
+```bash
+npm start
+```
+
+### Render environment variables
+
+Required:
 
 ```env
+MONGODB_URI=your_mongodb_uri
+CLIENT_URL=https://your-app.onrender.com
+CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key
+CLERK_SECRET_KEY=your_clerk_secret_key
 VITE_CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key
-VITE_API_BASE_URL=https://your-api-domain.example.com
+NPM_CONFIG_PRODUCTION=false
 ```
 
-If `VITE_API_BASE_URL` is not set, the frontend uses the current origin. That is the recommended production setup when the backend serves the built app.
-
-### Invitation Emails on Render Free
-
-Render Free blocks outbound SMTP, so Gmail SMTP invite sending will not work there.
-Use Resend over HTTPS instead:
+Mail via Resend:
 
 ```env
 RESEND_API_KEY=re_your_resend_api_key
 MAIL_FROM=ProjectCamp <onboarding@resend.dev>
 ```
 
-SMTP settings are still useful locally or on hosts that allow outbound SMTP.
+## Email and invitation notes
 
----
+- On Render Free, outbound SMTP is unreliable or blocked, so Resend is the safer option.
+- Resend test mode can send only to your own email address until you verify a domain.
+- If you do not have a verified mail domain yet, the Team page includes a manual "Copy link" fallback for invitations.
 
-## 📜 License
+## Data persistence
 
-This project is licensed under the MIT License.
+The app uses MongoDB for persistence. Important collections include:
 
----
+- projects
+- projectmembers
+- tasks
+- tickets
+- ticketcomments
+- invitations
+- users
 
-## 👤 Maintainer
+So yes: projects, tasks, tickets, comments, and invitations are stored in the database, not just browser state.
 
-**[indomitus069](https://github.com/indomitus069)**
+## Notes on current auth
+
+- Development deployments can use Clerk test keys.
+- Public production use should move to Clerk production keys and a custom domain you control.
+
+## License
+
+This project is licensed under the MIT License. See `LICENSE.md`.
+
+## Maintainer
+
+- GitHub: [indomitus069](https://github.com/indomitus069)
