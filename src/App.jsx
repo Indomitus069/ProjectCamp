@@ -8,6 +8,7 @@ import ProjectDetails from "./pages/ProjectDetails";
 import TaskDetails from "./pages/TaskDetails";
 import AcceptInvitation from "./pages/AcceptInvitation";
 import Settings from "./pages/Settings";
+import Tickets from "./pages/Tickets";
 import { SignedIn, SignedOut, RedirectToSignIn } from "@clerk/clerk-react";
 
 const App = () => {
@@ -20,6 +21,7 @@ const App = () => {
                         <Route index element={<Dashboard />} />
                         <Route path="team" element={<Team />} />
                         <Route path="projects" element={<Projects />} />
+                        <Route path="tickets" element={<Tickets />} />
                         <Route path="settings" element={<Settings />} />
                         <Route path="setting" element={<Settings />} />
                         <Route path="projectsDetail" element={<ProjectDetails />} />

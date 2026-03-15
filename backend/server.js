@@ -33,6 +33,7 @@ const projectRoutes = require("./routes/project.routes");
 const taskRoutes = require("./routes/task.routes");
 const noteRoutes = require("./routes/note.routes");
 const invitationRoutes = require("./routes/invitation.routes");
+const ticketRoutes = require("./routes/ticket.routes");
 
 // Routes declaration
 app.use("/api/v1/system", systemRoutes);
@@ -40,6 +41,7 @@ app.use("/api/v1/projects", projectRoutes);
 app.use("/api/v1/tasks", taskRoutes);
 app.use("/api/v1/notes", noteRoutes);
 app.use("/api/v1/invitations", invitationRoutes);
+app.use("/api/v1/tickets", ticketRoutes);
 
 if (hasFrontendBuild) {
   app.use(express.static(distDir));

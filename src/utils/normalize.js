@@ -57,3 +57,33 @@ export function normalizeTask(t) {
         subtasks: Array.isArray(t.subtasks) ? t.subtasks : [],
     };
 }
+
+export function normalizeTicket(ticket) {
+    if (!ticket || typeof ticket !== "object") return null;
+    const id = ticket._id ?? ticket.id;
+    if (!id) return null;
+
+    return {
+        id: String(id),
+        ticketNumber: ticket.ticketNumber != null ? String(ticket.ticketNumber) : "",
+        projectId: ticket.projectId != null ? String(ticket.projectId) : "",
+        title: ticket.title != null ? String(ticket.title) : "",
+        description: ticket.description != null ? String(ticket.description) : "",
+        requesterName: ticket.requesterName != null ? String(ticket.requesterName) : "",
+        requesterEmail: ticket.requesterEmail != null ? String(ticket.requesterEmail) : "",
+        assigneeId: ticket.assigneeId != null ? String(ticket.assigneeId) : "",
+        createdBy: ticket.createdBy != null ? String(ticket.createdBy) : "",
+        category: (ticket.category || "support").toUpperCase().replace(/\s/g, "_"),
+        status: (ticket.status || "open").toUpperCase().replace(/\s/g, "_"),
+        priority: (ticket.priority || "medium").toUpperCase().replace(/\s/g, "_"),
+        createdAt: ticket.createdAt ?? null,
+        updatedAt: ticket.updatedAt ?? null,
+        assignee: ticket.assignee ? {
+            id: String(ticket.assignee.id),
+            name: ticket.assignee.name != null ? String(ticket.assignee.name) : "",
+            email: ticket.assignee.email != null ? String(ticket.assignee.email) : "",
+            imageUrl: ticket.assignee.imageUrl ?? ticket.assignee.image ?? "",
+            image: ticket.assignee.image ?? ticket.assignee.imageUrl ?? "",
+        } : null,
+    };
+}
